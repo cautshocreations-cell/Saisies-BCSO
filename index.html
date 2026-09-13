@@ -77,7 +77,9 @@
 				return responseText ? JSON.parse(responseText) : null;
 			}
 
-			async function saveToCloud() {
+			var cloudSaveQueue = Promise.resolve();
+
+			async function saveToCloud(showMessage) {
 				var rows = datatable.rows().data().toArray().map(function (row) {
 					return {
 						serial: row.serial || '',
@@ -99,7 +101,19 @@
 						body: JSON.stringify(rows)
 					});
 				}
-				alert('Base synchronisée en ligne.');
+				if (showMessage) {
+					alert('Base synchronisée en ligne.');
+				}
+			}
+
+			function queueCloudSave() {
+				cloudSaveQueue = cloudSaveQueue.then(function () {
+					return saveToCloud(false);
+				}).catch(function (error) {
+					console.error('Sauvegarde automatique impossible', error);
+					alert('Sauvegarde automatique impossible : ' + error.message);
+				});
+				return cloudSaveQueue;
 			}
 
 			async function loadFromCloud(showMessage) {
@@ -166,7 +180,7 @@
 					{
 						text: 'SAUVEGARDER',
 						action: function () {
-							saveToCloud().catch(function (error) {
+							saveToCloud(true).catch(function (error) {
 								console.error(error);
 								alert('Synchronisation impossible : ' + error.message);
 							});
@@ -190,6 +204,7 @@
 			function delete_Row(a){
 				datatable.row( $(a).parents('tr') ).remove().draw();
 				updateButtonVisibility();
+				queueCloudSave();
 			};
 			
 			$('#myTable').on('click', 'td.editor-delete', function () {
@@ -221,6 +236,7 @@
 					info_content: $('#edit_data').find('textarea[id="weapon_details"]').val().trim()
 				};
 				datatable.row(b).data(newData).draw();
+				queueCloudSave();
 				$('#editModal').modal('toggle');
 				$('#updateConfirmationModal').modal('toggle');
 			} );
@@ -249,6 +265,7 @@
 					info_content: infoContent
 				};
 				datatable.row.add(newData).draw();
+				queueCloudSave();
 				$('#addModal').modal('toggle');
 				$('#addConfirmationModal').modal('toggle');
 				updateButtonVisibility();
@@ -294,6 +311,7 @@
 				var normalizedRows = Array.isArray(rows) ? rows.map(normalizeRow) : [];
 				datatable.clear().rows.add(normalizedRows).draw();
 				updateButtonVisibility();
+				queueCloudSave();
 			  } catch (error) {
 				console.error('Format de fichier invalide', error);
 				alert('Fichier invalide. Importez un export .txt de la base BCSO.');
