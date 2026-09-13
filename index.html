@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="assets/fonts/font-awesome.min.css">
 	<link href="assets/bootstrap/css/datatables.min.css" rel="stylesheet"/>
 	<link rel="stylesheet" href="assets/bootstrap/css/inventory.css">
+	<script src="assets/js/supabase-config.js"></script>
 	<script src="assets/js/jquery.min.js"></script>
 	<script src="assets/js/datatables.min.js"></script>
 	<script type="text/javascript">
@@ -43,6 +44,60 @@
 					info_label: row.info_label || 'Aucun fichier',
 					info_content: row.info_content || ''
 				};
+			}
+
+			function getSupabaseUrl() {
+				return window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url;
+			}
+
+			function getSupabaseHeaders() {
+				return {
+					'apikey': window.SUPABASE_CONFIG.anonKey,
+					'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey,
+					'Content-Type': 'application/json'
+				};
+			}
+
+			function assertSupabaseConfigured() {
+				if (!getSupabaseUrl() || !window.SUPABASE_CONFIG.anonKey || getSupabaseUrl().indexOf('VOTRE-PROJET') !== -1) {
+					throw new Error('Configurez Supabase dans assets/js/supabase-config.js.');
+				}
+			}
+
+			async function supabaseRequest(path, options) {
+				assertSupabaseConfigured();
+				var response = await fetch(getSupabaseUrl() + '/rest/v1/' + path, Object.assign({
+					headers: getSupabaseHeaders()
+				}, options || {}));
+				if (!response.ok) {
+					throw new Error(await response.text() || 'Erreur Supabase');
+				}
+				return response.status === 204 ? null : response.json();
+			}
+
+			async function saveToCloud() {
+				var rows = datatable.rows().data().toArray().map(function (row) {
+					return {
+						serial: row.serial || '',
+						weapon_name: row.weapon_name || '',
+						category: row.category || 'Cat 1',
+						info_label: row.info_label || 'Aucun fichier',
+						info_content: row.info_content || ''
+					};
+				});
+				await supabaseRequest('rpc/replace_inventory', {
+					method: 'POST',
+					body: JSON.stringify({ rows: rows })
+				});
+				alert('Base synchronisée en ligne.');
+			}
+
+			async function loadFromCloud() {
+				var rows = await supabaseRequest('inventory_records?select=serial,weapon_name,category,info_label,info_content&order=id.asc');
+				var normalizedRows = Array.isArray(rows) ? rows.map(normalizeRow) : [];
+				datatable.clear().rows.add(normalizedRows).draw();
+				updateButtonVisibility();
+				alert('Base chargée depuis le cloud.');
 			}
 
 			function updateButtonVisibility() {
@@ -98,29 +153,21 @@
 					},
 					{
 						text: 'SAUVEGARDER',
-						action: function ( e, dt, button, config ) {
-							var rows = dt.rows().data().toArray().map(function (row) {
-								return [
-									row.serial || '',
-									row.weapon_name || '',
-									row.category || 'Cat 1',
-									row.info_label || 'Aucun fichier',
-									row.info_content || ''
-								];
+						action: function () {
+							saveToCloud().catch(function (error) {
+								console.error(error);
+								alert('Synchronisation impossible : ' + error.message);
 							});
-							var payload = {
-								header: ['N° de série', 'Nom de l\'arme', 'Catégorie', 'Fichier .txt', 'Informations complémentaires'],
-								footer: null,
-								body: rows
-							};
-							$.fn.dataTable.fileSave(
-								new Blob( [ JSON.stringify(payload) ] ),
-								'DB_BCSO.txt'
-							);
 						}
 					},
 					{
-						text: 'CHARGER'
+						text: 'CHARGER',
+						action: function () {
+							loadFromCloud().catch(function (error) {
+								console.error(error);
+								alert('Chargement impossible : ' + error.message);
+							});
+						}
 					}
 				]
 			} );
@@ -207,7 +254,6 @@
 					buttonShow[i].hidden = false;
 				} else if (buttonShow[i].innerHTML == '<span>CHARGER</span>'){
 					buttonShow[i].classList.add('data_button');
-					buttonShow[i].setAttribute('onclick', "document.getElementById('upload_data').click();");
 				}
 			}
 			updateButtonVisibility();
