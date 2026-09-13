@@ -92,12 +92,14 @@
 				alert('Base synchronisée en ligne.');
 			}
 
-			async function loadFromCloud() {
+			async function loadFromCloud(showMessage) {
 				var rows = await supabaseRequest('inventory_records?select=serial,weapon_name,category,info_label,info_content&order=id.asc');
 				var normalizedRows = Array.isArray(rows) ? rows.map(normalizeRow) : [];
 				datatable.clear().rows.add(normalizedRows).draw();
 				updateButtonVisibility();
-				alert('Base chargée depuis le cloud.');
+				if (showMessage) {
+					alert('Base chargée depuis le cloud.');
+				}
 			}
 
 			function updateButtonVisibility() {
@@ -257,6 +259,10 @@
 				}
 			}
 			updateButtonVisibility();
+			loadFromCloud(false).catch(function (error) {
+				console.error('Chargement automatique Supabase impossible', error);
+				alert('La base en ligne n\'a pas pu être chargée : ' + error.message);
+			});
 			
 			function readSingleFile(e) {
 			  var file = e.target.files[0];
