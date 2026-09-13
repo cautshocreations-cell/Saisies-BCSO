@@ -33,18 +33,14 @@
 						serial: row[0] || '',
 						weapon_name: row[1] || '',
 						category: row[2] || 'Cat 1',
-						info_label: row[3] || 'Aucun fichier',
-						info_content: row[4] || '',
-						description: row[5] || ''
+						description: row[4] || ''
 					};
 				}
 				return {
 					serial: row.serial || '',
 					weapon_name: row.weapon_name || '',
 					category: row.category || 'Cat 1',
-					info_label: row.info_label || 'Aucun fichier',
-					info_content: row.info_content || '',
-					description: row.description || ((row.info_label || 'Aucun fichier') === 'Aucun fichier' ? row.info_content || '' : '')
+					description: row.description || ''
 				};
 			}
 
@@ -89,8 +85,8 @@
 						serial: serial,
 						weapon_name: row.weapon_name || '',
 						category: row.category || 'Cat 1',
-						info_label: row.info_label || 'Aucun fichier',
-						info_content: row.info_content || '',
+						info_label: 'Aucun fichier',
+						info_content: '',
 						description: row.description || ''
 					};
 				});
@@ -125,7 +121,7 @@
 			}
 
 			async function loadFromCloud(showMessage) {
-				var rows = await supabaseRequest('inventory_records?select=serial,weapon_name,category,info_label,info_content,description&order=id.asc');
+				var rows = await supabaseRequest('inventory_records?select=serial,weapon_name,category,description&order=id.asc');
 				var normalizedRows = Array.isArray(rows) ? rows.map(normalizeRow) : [];
 				datatable.clear().rows.add(normalizedRows).draw();
 				updateButtonVisibility();
@@ -156,7 +152,6 @@
 					{ data: 'serial', title: 'N° de série' },
 					{ data: 'weapon_name', title: 'Nom de l\'arme' },
 					{ data: 'category', title: 'Catégorie' },
-					{ data: 'info_label', title: 'Fichier .txt' },
 					{
 						data: null,
 						className: 'dt-center editor-edit',
@@ -234,7 +229,6 @@
 				$('#edit_data').find('input[id="weapon_name"]').val(rowData.weapon_name || '');
 				$('#edit_data').find('select[id="weapon_category"]').val(rowData.category || 'Cat 1');
 				$('#edit_data').find('textarea[id="weapon_details"]').val(rowData.description || '');
-				$('#edit_data').find('input[id="info_file_name"]').val(rowData.info_label || 'Aucun fichier');
 				$('#editModal').modal('toggle');
 			} );
 			
@@ -244,8 +238,8 @@
 					serial: $('#edit_data').find('input[id="serial_number"]').val().trim(),
 					weapon_name: $('#edit_data').find('input[id="weapon_name"]').val().trim(),
 					category: $('#edit_data').find('select[id="weapon_category"]').val(),
-					info_label: $('#edit_data').find('input[id="info_file_name"]').val().trim() || 'Aucun fichier',
-					info_content: b && datatable.row(b).data().info_content || '',
+					info_label: 'Aucun fichier',
+					info_content: '',
 					description: $('#edit_data').find('textarea[id="weapon_details"]').val().trim()
 				};
 				datatable.row(b).data(newData).draw();
@@ -257,27 +251,13 @@
 
 			async function handleAddData() {
 				event.preventDefault();
-				var fileInput = document.getElementById('info_file');
-				var selectedFile = fileInput && fileInput.files ? fileInput.files[0] : null;
 				var description = $('#add_data').find('textarea[id="weapon_details"]').val().trim();
-				var infoContent = '';
-				var infoLabel = 'Aucun fichier';
-				if (selectedFile) {
-					infoLabel = selectedFile.name;
-					var reader = new FileReader();
-					var textContent = await new Promise(function (resolve, reject) {
-						reader.onload = function (event) { resolve(event.target.result); };
-						reader.onerror = function () { reject('Erreur lecture du fichier'); };
-						reader.readAsText(selectedFile);
-					});
-					infoContent = textContent || '';
-				}
 				var newData = {
 					serial: $('#add_data').find('input[id="serial_number"]').val().trim(),
 					weapon_name: $('#add_data').find('input[id="weapon_name"]').val().trim(),
 					category: $('#add_data').find('select[id="weapon_category"]').val(),
-					info_label: infoLabel,
-					info_content: infoContent,
+					info_label: 'Aucun fichier',
+					info_content: '',
 					description: description
 				};
 				datatable.row.add(newData).draw();
@@ -383,14 +363,13 @@
 						serial: row.serial || 'N° inconnu',
 						weapon_name: row.weapon_name || 'Arme inconnue',
 						category: row.category || 'Cat 1',
-						info_label: row.info_label || 'Aucun fichier',
-						info_content: row.info_content || '',
+						description: row.description || '',
 						date: date.toLocaleDateString('fr-FR'),
 						time: date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 					};
 				});
 				var html = '<ul class="list-group list-group-flush">' + historyItems.map(function (item) {
-					return '<li class="list-group-item"><div class="d-flex justify-content-between align-items-center"><strong>' + item.weapon_name + '</strong><span class="text-muted small">' + item.date + ' ' + item.time + '</span></div><div class="small text-muted mt-1">' + item.serial + ' - ' + item.category + '</div><div class="small mt-1"><strong>Fichier :</strong> ' + item.info_label + '</div><div class="small text-muted mt-1">' + (item.description || 'Aucune description') + '</div></li>';
+					return '<li class="list-group-item"><div class="d-flex justify-content-between align-items-center"><strong>' + item.weapon_name + '</strong><span class="text-muted small">' + item.date + ' ' + item.time + '</span></div><div class="small text-muted mt-1">' + item.serial + ' - ' + item.category + '</div><div class="small text-muted mt-1">' + (item.description || 'Aucune description') + '</div></li>';
 				}).join('') + '</ul>';
 				$('#historyPanelContent').html(html);
 				$('#historyModalContent').html(html);
@@ -679,10 +658,6 @@
 										<option value="Cat 3">Cat 3</option>
 									</select>
 								</div>
-								<div class="form-group mb-3">
-									<label for="info_file_name" class="mb-1">Fichier .txt associé</label>
-									<input type="text" class="form-control" id="info_file_name" placeholder="Nom du fichier .txt" style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
-								</div>
 								<div class="form-group">
 									<label for="weapon_details" class="mb-1">Informations complémentaires</label>
 									<textarea class="form-control" id="weapon_details" rows="4" placeholder="Détails, provenance, observations ou résumé de l'arme" style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;"></textarea>
@@ -721,10 +696,6 @@
 										<option value="Cat 2">Cat 2</option>
 										<option value="Cat 3">Cat 3</option>
 									</select>
-								</div>
-								<div class="form-group mb-3">
-									<label for="info_file" class="mb-1">Ajouter un fichier .txt</label>
-									<input type="file" class="form-control" id="info_file" accept=".txt,text/plain" style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 								<div class="form-group">
 									<label for="weapon_details" class="mb-1">Informations complémentaires</label>
@@ -765,12 +736,6 @@
 								  <i class="far fa-comment-dots fa-stack-1x" style="color: rgba(255,255,255,1); font-size: calc(1vw + 1vh);"></i>
 								</span>
 							</div>
-							<div class="row" style="margin-top: 10px">
-								<span class="fa-stack fa-2x menu_button" style="margin: auto; cursor: pointer;" title="Dossiers">
-								  <i class="fas fa-square fa-stack-1x square_bg" style="color:rgba(0,0,0,0); font-size: calc(2.3vw + 2.3vh); transition: 0.3s;"></i>
-								  <i class="far fa-folder-open fa-stack-1x" style="color: rgba(255,255,255,1); font-size: calc(1vw + 1vh);"></i>
-								</span>
-							</div>
 						</div>
 						<div class="col-11 p-0">
 							<div class="row">
@@ -793,7 +758,6 @@
 														<th>N° de série</th>
 														<th>Nom de l'arme</th>
 														<th>Catégorie</th>
-														<th>Fichier .txt</th>
 														<th></th>
 														<th></th>
 													</tr>
