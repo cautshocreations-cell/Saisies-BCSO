@@ -13,14 +13,20 @@ alter table public.inventory_records enable row level security;
 drop policy if exists "Public can read inventory" on public.inventory_records;
 create policy "Public can read inventory"
 on public.inventory_records for select
+to anon
 using (true);
 
 drop policy if exists "Public can insert inventory" on public.inventory_records;
 create policy "Public can insert inventory"
 on public.inventory_records for insert
+to anon
 with check (true);
 
 drop policy if exists "Public can delete inventory" on public.inventory_records;
 create policy "Public can delete inventory"
 on public.inventory_records for delete
+to anon
 using (true);
+
+grant select, insert, delete on public.inventory_records to anon;
+grant usage, select on sequence public.inventory_records_id_seq to anon;
