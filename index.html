@@ -359,7 +359,7 @@
 			}
 
 			function renderHistory() {
-				var rows = datatable.rows().data().toArray().slice(-6).reverse();
+				var rows = datatable.rows().data().toArray().reverse();
 				if (!rows.length) {
 					$('#historyPanelContent').html('<p>Aucun historique pour le moment.</p>');
 					$('#historyModalContent').html('<p>Aucun historique pour le moment.</p>');
@@ -367,16 +367,19 @@
 				}
 				var historyItems = rows.map(function (row, index) {
 					var date = new Date();
-					date.setMinutes(date.getMinutes() - (rows.length - index) * 7);
+					date.setMinutes(date.getMinutes() - index * 7);
 					return {
+						serial: row.serial || 'N° inconnu',
 						weapon_name: row.weapon_name || 'Arme inconnue',
 						category: row.category || 'Cat 1',
+						info_label: row.info_label || 'Aucun fichier',
+						info_content: row.info_content || '',
 						date: date.toLocaleDateString('fr-FR'),
 						time: date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 					};
 				});
 				var html = '<ul class="list-group list-group-flush">' + historyItems.map(function (item) {
-					return '<li class="list-group-item"><div class="d-flex justify-content-between align-items-center"><strong>' + item.weapon_name + '</strong><span class="text-muted small">' + item.date + ' ' + item.time + '</span></div><div class="small text-muted mt-1">' + item.category + '</div></li>';
+					return '<li class="list-group-item"><div class="d-flex justify-content-between align-items-center"><strong>' + item.weapon_name + '</strong><span class="text-muted small">' + item.date + ' ' + item.time + '</span></div><div class="small text-muted mt-1">' + item.serial + ' - ' + item.category + '</div><div class="small mt-1"><strong>Fichier :</strong> ' + item.info_label + '</div><div class="small text-muted mt-1">' + (item.info_content || 'Aucune information complémentaire') + '</div></li>';
 				}).join('') + '</ul>';
 				$('#historyPanelContent').html(html);
 				$('#historyModalContent').html(html);
@@ -452,8 +455,25 @@
 
 			function renderFiles() {
 				var rows = datatable.rows().data().toArray();
-				var files = rows.filter(function (row) {
-					return (row.info_content && row.info_content.trim()) || (row.info_label && row.info_label !== 'Aucun fichier');
+				var files = [];
+				rows.forEach(function (row) {
+					var embeddedRows = null;
+					try {
+						var parsedContent = JSON.parse(row.info_content || '');
+						embeddedRows = Array.isArray(parsedContent.body) ? parsedContent.body : null;
+					} catch (error) {
+						embeddedRows = null;
+					}
+					if (embeddedRows) {
+						embeddedRows.forEach(function (embeddedRow) {
+							var normalizedEmbeddedRow = normalizeRow(embeddedRow);
+							if (normalizedEmbeddedRow.info_label !== 'Aucun fichier' || normalizedEmbeddedRow.info_content) {
+								files.push(normalizedEmbeddedRow);
+							}
+						});
+					} else if ((row.info_content && row.info_content.trim()) || (row.info_label && row.info_label !== 'Aucun fichier')) {
+						files.push(row);
+					}
 				});
 				if (!files.length) {
 					$('#filesPanelContent').html('<p>Aucun fichier .txt associé pour le moment.</p>');
