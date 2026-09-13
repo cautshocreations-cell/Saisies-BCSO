@@ -70,9 +70,11 @@
 					headers: getSupabaseHeaders()
 				}, options || {}));
 				if (!response.ok) {
-					throw new Error(await response.text() || 'Erreur Supabase');
+					var errorText = await response.text();
+					throw new Error(errorText || 'Erreur Supabase');
 				}
-				return response.status === 204 ? null : response.json();
+				var responseText = await response.text();
+				return responseText ? JSON.parse(responseText) : null;
 			}
 
 			async function saveToCloud() {
