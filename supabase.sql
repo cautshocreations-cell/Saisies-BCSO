@@ -14,7 +14,7 @@ create policy "Public can read inventory"
 on public.inventory_records for select
 using (true);
 
-create or replace function public.replace_inventory(rows jsonb)
+create or replace function public.replace_inventory(p_rows jsonb)
 returns void
 language plpgsql
 security definer
@@ -25,7 +25,7 @@ begin
 
     insert into public.inventory_records (serial, weapon_name, category, info_label, info_content, updated_at)
     select serial, weapon_name, category, info_label, info_content, now()
-    from jsonb_to_recordset(rows) as records(
+    from jsonb_to_recordset(p_rows) as records(
         serial text,
         weapon_name text,
         category text,

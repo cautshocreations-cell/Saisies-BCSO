@@ -87,7 +87,7 @@
 				});
 				await supabaseRequest('rpc/replace_inventory', {
 					method: 'POST',
-					body: JSON.stringify({ rows: rows })
+					body: JSON.stringify({ p_rows: rows })
 				});
 				alert('Base synchronisée en ligne.');
 			}
