@@ -121,6 +121,9 @@
 				var normalizedRows = Array.isArray(rows) ? rows.map(normalizeRow) : [];
 				datatable.clear().rows.add(normalizedRows).draw();
 				updateButtonVisibility();
+				if ($('#filesPanel').is(':visible')) {
+					renderFiles();
+				}
 				if (showMessage) {
 					alert('Base chargée depuis le cloud.');
 				}
@@ -204,6 +207,7 @@
 			function delete_Row(a){
 				datatable.row( $(a).parents('tr') ).remove().draw();
 				updateButtonVisibility();
+				renderFiles();
 				queueCloudSave();
 			};
 			
@@ -236,6 +240,7 @@
 					info_content: $('#edit_data').find('textarea[id="weapon_details"]').val().trim()
 				};
 				datatable.row(b).data(newData).draw();
+				renderFiles();
 				queueCloudSave();
 				$('#editModal').modal('toggle');
 				$('#updateConfirmationModal').modal('toggle');
@@ -265,6 +270,7 @@
 					info_content: infoContent
 				};
 				datatable.row.add(newData).draw();
+				renderFiles();
 				queueCloudSave();
 				$('#addModal').modal('toggle');
 				$('#addConfirmationModal').modal('toggle');
@@ -311,6 +317,7 @@
 				var normalizedRows = Array.isArray(rows) ? rows.map(normalizeRow) : [];
 				datatable.clear().rows.add(normalizedRows).draw();
 				updateButtonVisibility();
+				renderFiles();
 				queueCloudSave();
 			  } catch (error) {
 				console.error('Format de fichier invalide', error);
@@ -446,14 +453,14 @@
 			function renderFiles() {
 				var rows = datatable.rows().data().toArray();
 				var files = rows.filter(function (row) {
-					return row.info_label && row.info_label !== 'Aucun fichier' && (row.info_content || row.info_label);
+					return (row.info_content && row.info_content.trim()) || (row.info_label && row.info_label !== 'Aucun fichier');
 				});
 				if (!files.length) {
 					$('#filesPanelContent').html('<p>Aucun fichier .txt associé pour le moment.</p>');
 					return;
 				}
 				var html = '<ul class="list-group list-group-flush">' + files.map(function (row) {
-					var label = row.info_label || 'Fichier.txt';
+					var label = row.info_label && row.info_label !== 'Aucun fichier' ? row.info_label : 'Fichier.txt';
 					var safeLabel = label.replace(/[^a-zA-Z0-9_.-]/g, '_');
 					var content = row.info_content || '';
 					var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
