@@ -85,10 +85,18 @@
 						info_content: row.info_content || ''
 					};
 				});
-				await supabaseRequest('rpc/replace_inventory', {
-					method: 'POST',
-					body: JSON.stringify({ p_rows: rows })
+				await supabaseRequest('inventory_records?id=gt.0', {
+					method: 'DELETE'
 				});
+				if (rows.length) {
+					await supabaseRequest('inventory_records', {
+						method: 'POST',
+						headers: Object.assign(getSupabaseHeaders(), {
+							'Prefer': 'return=minimal'
+						}),
+						body: JSON.stringify(rows)
+					});
+				}
 				alert('Base synchronisée en ligne.');
 			}
 

@@ -10,29 +10,17 @@ create table public.inventory_records (
 
 alter table public.inventory_records enable row level security;
 
+drop policy if exists "Public can read inventory" on public.inventory_records;
 create policy "Public can read inventory"
 on public.inventory_records for select
 using (true);
 
-create or replace function public.replace_inventory(p_rows jsonb)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-    delete from public.inventory_records;
+drop policy if exists "Public can insert inventory" on public.inventory_records;
+create policy "Public can insert inventory"
+on public.inventory_records for insert
+with check (true);
 
-    insert into public.inventory_records (serial, weapon_name, category, info_label, info_content, updated_at)
-    select serial, weapon_name, category, info_label, info_content, now()
-    from jsonb_to_recordset(p_rows) as records(
-        serial text,
-        weapon_name text,
-        category text,
-        info_label text,
-        info_content text
-    );
-end;
-$$;
-
-grant execute on function public.replace_inventory(jsonb) to anon;
+drop policy if exists "Public can delete inventory" on public.inventory_records;
+create policy "Public can delete inventory"
+on public.inventory_records for delete
+using (true);
