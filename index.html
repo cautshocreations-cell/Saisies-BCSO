@@ -80,14 +80,19 @@
 			var cloudSaveQueue = Promise.resolve();
 
 			async function saveToCloud(showMessage) {
-				var rows = datatable.rows().data().toArray().map(function (row) {
-					return {
-						serial: row.serial || '',
+				var uniqueRows = {};
+				datatable.rows().data().toArray().forEach(function (row, index) {
+					var serial = (row.serial || '').trim() || 'SANS-SERIE-' + (index + 1);
+					uniqueRows[serial] = {
+						serial: serial,
 						weapon_name: row.weapon_name || '',
 						category: row.category || 'Cat 1',
 						info_label: row.info_label || 'Aucun fichier',
 						info_content: row.info_content || ''
 					};
+				});
+				var rows = Object.keys(uniqueRows).map(function (serial) {
+					return uniqueRows[serial];
 				});
 				await supabaseRequest('inventory_records?id=gt.0', {
 					method: 'DELETE'
@@ -106,9 +111,9 @@
 				}
 			}
 
-			function queueCloudSave() {
+			function queueCloudSave(showMessage) {
 				cloudSaveQueue = cloudSaveQueue.then(function () {
-					return saveToCloud(false);
+					return saveToCloud(!!showMessage);
 				}).catch(function (error) {
 					console.error('Sauvegarde automatique impossible', error);
 					alert('Sauvegarde automatique impossible : ' + error.message);
@@ -183,7 +188,7 @@
 					{
 						text: 'SAUVEGARDER',
 						action: function () {
-							saveToCloud(true).catch(function (error) {
+							queueCloudSave(true).catch(function (error) {
 								console.error(error);
 								alert('Synchronisation impossible : ' + error.message);
 							});
@@ -480,7 +485,8 @@
 					return;
 				}
 				var html = '<ul class="list-group list-group-flush">' + files.map(function (row) {
-					var label = row.info_label && row.info_label !== 'Aucun fichier' ? row.info_label : 'Fichier.txt';
+					var fallbackName = (row.serial || row.weapon_name || 'document').replace(/[^a-zA-Z0-9_.-]/g, '_');
+					var label = row.info_label && row.info_label !== 'Aucun fichier' ? row.info_label : fallbackName + '.txt';
 					var safeLabel = label.replace(/[^a-zA-Z0-9_.-]/g, '_');
 					var content = row.info_content || '';
 					var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -495,6 +501,9 @@
 			}
 
 			function setActivePanel(panelName) {
+				if (panelName === 'filesPanel') {
+					renderFiles();
+				}
 				var panels = ['basePanel', 'statsPanel', 'historyPanel', 'requestPanel', 'filesPanel'];
 				for (var i = 0; i < panels.length; i++) {
 					var isVisible = panels[i] === panelName;
