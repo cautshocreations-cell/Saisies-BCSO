@@ -34,7 +34,8 @@
 						weapon_name: row[1] || '',
 						category: row[2] || 'Cat 1',
 						info_label: row[3] || 'Aucun fichier',
-						info_content: row[4] || ''
+						info_content: row[4] || '',
+						description: row[5] || ''
 					};
 				}
 				return {
@@ -42,7 +43,8 @@
 					weapon_name: row.weapon_name || '',
 					category: row.category || 'Cat 1',
 					info_label: row.info_label || 'Aucun fichier',
-					info_content: row.info_content || ''
+					info_content: row.info_content || '',
+					description: row.description || ((row.info_label || 'Aucun fichier') === 'Aucun fichier' ? row.info_content || '' : '')
 				};
 			}
 
@@ -88,7 +90,8 @@
 						weapon_name: row.weapon_name || '',
 						category: row.category || 'Cat 1',
 						info_label: row.info_label || 'Aucun fichier',
-						info_content: row.info_content || ''
+						info_content: row.info_content || '',
+						description: row.description || ''
 					};
 				});
 				var rows = Object.keys(uniqueRows).map(function (serial) {
@@ -122,7 +125,7 @@
 			}
 
 			async function loadFromCloud(showMessage) {
-				var rows = await supabaseRequest('inventory_records?select=serial,weapon_name,category,info_label,info_content&order=id.asc');
+				var rows = await supabaseRequest('inventory_records?select=serial,weapon_name,category,info_label,info_content,description&order=id.asc');
 				var normalizedRows = Array.isArray(rows) ? rows.map(normalizeRow) : [];
 				datatable.clear().rows.add(normalizedRows).draw();
 				updateButtonVisibility();
@@ -230,7 +233,7 @@
 				$('#edit_data').find('input[id="serial_number"]').val(rowData.serial || '');
 				$('#edit_data').find('input[id="weapon_name"]').val(rowData.weapon_name || '');
 				$('#edit_data').find('select[id="weapon_category"]').val(rowData.category || 'Cat 1');
-				$('#edit_data').find('textarea[id="weapon_details"]').val(rowData.info_content || '');
+				$('#edit_data').find('textarea[id="weapon_details"]').val(rowData.description || '');
 				$('#edit_data').find('input[id="info_file_name"]').val(rowData.info_label || 'Aucun fichier');
 				$('#editModal').modal('toggle');
 			} );
@@ -242,7 +245,8 @@
 					weapon_name: $('#edit_data').find('input[id="weapon_name"]').val().trim(),
 					category: $('#edit_data').find('select[id="weapon_category"]').val(),
 					info_label: $('#edit_data').find('input[id="info_file_name"]').val().trim() || 'Aucun fichier',
-					info_content: $('#edit_data').find('textarea[id="weapon_details"]').val().trim()
+					info_content: b && datatable.row(b).data().info_content || '',
+					description: $('#edit_data').find('textarea[id="weapon_details"]').val().trim()
 				};
 				datatable.row(b).data(newData).draw();
 				renderFiles();
@@ -255,7 +259,8 @@
 				event.preventDefault();
 				var fileInput = document.getElementById('info_file');
 				var selectedFile = fileInput && fileInput.files ? fileInput.files[0] : null;
-				var infoContent = $('#add_data').find('textarea[id="weapon_details"]').val().trim();
+				var description = $('#add_data').find('textarea[id="weapon_details"]').val().trim();
+				var infoContent = '';
 				var infoLabel = 'Aucun fichier';
 				if (selectedFile) {
 					infoLabel = selectedFile.name;
@@ -265,14 +270,15 @@
 						reader.onerror = function () { reject('Erreur lecture du fichier'); };
 						reader.readAsText(selectedFile);
 					});
-					infoContent = textContent || infoContent;
+					infoContent = textContent || '';
 				}
 				var newData = {
 					serial: $('#add_data').find('input[id="serial_number"]').val().trim(),
 					weapon_name: $('#add_data').find('input[id="weapon_name"]').val().trim(),
 					category: $('#add_data').find('select[id="weapon_category"]').val(),
 					info_label: infoLabel,
-					info_content: infoContent
+					info_content: infoContent,
+					description: description
 				};
 				datatable.row.add(newData).draw();
 				renderFiles();
@@ -384,7 +390,7 @@
 					};
 				});
 				var html = '<ul class="list-group list-group-flush">' + historyItems.map(function (item) {
-					return '<li class="list-group-item"><div class="d-flex justify-content-between align-items-center"><strong>' + item.weapon_name + '</strong><span class="text-muted small">' + item.date + ' ' + item.time + '</span></div><div class="small text-muted mt-1">' + item.serial + ' - ' + item.category + '</div><div class="small mt-1"><strong>Fichier :</strong> ' + item.info_label + '</div><div class="small text-muted mt-1">' + (item.info_content || 'Aucune information complémentaire') + '</div></li>';
+					return '<li class="list-group-item"><div class="d-flex justify-content-between align-items-center"><strong>' + item.weapon_name + '</strong><span class="text-muted small">' + item.date + ' ' + item.time + '</span></div><div class="small text-muted mt-1">' + item.serial + ' - ' + item.category + '</div><div class="small mt-1"><strong>Fichier :</strong> ' + item.info_label + '</div><div class="small text-muted mt-1">' + (item.description || 'Aucune description') + '</div></li>';
 				}).join('') + '</ul>';
 				$('#historyPanelContent').html(html);
 				$('#historyModalContent').html(html);
